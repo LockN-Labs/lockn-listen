@@ -1,19 +1,21 @@
 using LockNListen.Api.Endpoints;
 using LockNListen.Domain.Interfaces;
+using LockNListen.Domain.Services;
 using LockNListen.Infrastructure.Services;
+using LockNListen.Infrastructure.Sound;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services
+// Add services to the container
+builder.Services.Configure<SoundClassifierOptions>(builder.Configuration.GetSection("SoundClassifier"));
+builder.Services.AddSingleton<ISttService, WhisperSttService>();
+builder.Services.AddSingleton<ISoundClassifier, OnnxSoundClassifier>();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-// Register Listen services
-builder.Services.AddSingleton<ISttService, WhisperSttService>();
-
 var app = builder.Build();
 
-// Configure pipeline
+// Configure the HTTP request pipeline
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -27,5 +29,8 @@ app.MapGet("/health", () => Results.Ok(new { status = "healthy", service = "lock
 
 // Map transcription endpoints (LOC-41)
 app.MapTranscriptionEndpoints();
+
+// Map classification endpoints (LOC-42)
+app.MapClassifyEndpoints();
 
 app.Run();
