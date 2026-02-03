@@ -1,0 +1,31 @@
+name: Release
+on:
+  push:
+    branches: [master]
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+          
+      - name: Build Docker image
+        run: |
+          docker build -t ghcr.io/lockn-ai/lockn-listen:sha-${{ github.sha }} .
+          
+      - name: Log in to GHCR
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+          
+      - name: Push to GHCR
+        run: |
+          docker push ghcr.io/lockn-ai/lockn-listen:sha-${{ github.sha }}
+          docker tag ghcr.io/lockn-ai/lockn-listen:sha-${{ github.sha }} ghcr.io/lockn-ai/lockn-listen:latest
+          docker push ghcr.io/lockn-ai/lockn-listen:latest
