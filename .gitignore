@@ -1,0 +1,32 @@
+# Build outputs
+bin/
+obj/
+out/
+
+# IDE
+.vs/
+.vscode/
+*.user
+*.suo
+
+# Packages
+packages/
+
+# Test results
+TestResults/
+coverage/
+
+# Whisper models (large files)
+models/*.bin
+models/*.onnx
+
+# Logs
+*.log
+logs/
+
+# Environment
+.env
+.env.local
+appsettings.*.json
+!appsettings.json
+!appsettings.Development.json
