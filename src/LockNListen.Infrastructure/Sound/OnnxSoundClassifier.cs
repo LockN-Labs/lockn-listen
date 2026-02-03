@@ -18,20 +18,25 @@ namespace LockNListen.Infrastructure.Sound
         private static string _modelPath;
         private static readonly Lazy<InferenceSession> _session = new(() => CreateSession());
 
+        // YAMNet class indices mapped to target categories
+        // Multiple indices map to same category (e.g., "Speech, male" and "Speech, female" → "Speech")
         private static readonly Dictionary<int, string> CategoryMap = new() {
-            { 0, "Speech" }, { 1, "Speech" },  // Speech classes
-            { 137, "Music" }, { 138, "Music" }, // Music classes  
+            { 0, "Speech" }, { 1, "Speech" },   // Speech, male/female
+            { 137, "Music" }, { 138, "Music" }, // Music, genre variants
             { 494, "Doorbell" },
             { 68, "Dog" },
-            // etc
+            { 400, "Alarm" },
+            { 401, "Alarm" },  // Fire alarm, smoke detector
         };
 
         private static InferenceSession CreateSession() {
             var options = new SessionOptions();
             try {
                 options.AppendExecutionProvider_CUDA();
-            } catch {
-                // CPU fallback - CUDA not available
+            } catch (Exception ex) {
+                // CPU fallback - CUDA not available or failed to initialize
+                // In production, consider logging: ex.Message
+                System.Diagnostics.Debug.WriteLine($"CUDA unavailable, using CPU: {ex.Message}");
             }
             return new InferenceSession(_modelPath, options);
         }
@@ -39,7 +44,7 @@ namespace LockNListen.Infrastructure.Sound
         private static async Task EnsureModelExists(string modelPath) {
             if (!File.Exists(modelPath)) {
                 Directory.CreateDirectory(Path.GetDirectoryName(modelPath)!);
-                using var http = new HttpClient();
+                using var http = new HttpClient { Timeout = TimeSpan.FromMinutes(5) };
                 var bytes = await http.GetByteArrayAsync("https://github.com/onnx/models/raw/main/validated/vision/classification/yamnet/model/yamnet.onnx");
                 await File.WriteAllBytesAsync(modelPath, bytes);
             }
