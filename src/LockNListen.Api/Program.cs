@@ -1,6 +1,8 @@
 using LockNListen.Api.Endpoints;
-using LockNListen.Domain.Interfaces;
+using LockNListen.Api.Middleware;
+using LockNListen.Domain.Models;
 using LockNListen.Domain.Services;
+using LockNListen.Infrastructure.Auth;
 using LockNListen.Infrastructure.Services;
 using LockNListen.Infrastructure.Sound;
 
@@ -10,6 +12,12 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.Configure<SoundClassifierOptions>(builder.Configuration.GetSection("SoundClassifier"));
 builder.Services.AddSingleton<ISttService, WhisperSttService>();
 builder.Services.AddSingleton<ISoundClassifier, OnnxSoundClassifier>();
+
+// Add API Key services
+builder.Services.Configure<ApiKeyOptions>(builder.Configuration.GetSection("ApiKey"));
+builder.Services.AddScoped<IApiKeyRepository, InMemoryApiKeyRepository>();
+builder.Services.AddScoped<IApiKeyService, ApiKeyService>();
+
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
@@ -22,10 +30,16 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+// Add API Key middleware (before other routes)
+app.UseMiddleware<ApiKeyMiddleware>();
+
 // Health check
 app.MapGet("/health", () => Results.Ok(new { status = "healthy", service = "lockn-listen" }))
     .WithTags("Health")
     .WithOpenApi();
+
+// Map authentication endpoints
+app.MapAuthEndpoints();
 
 // Map transcription endpoints (LOC-41)
 app.MapTranscriptionEndpoints();
