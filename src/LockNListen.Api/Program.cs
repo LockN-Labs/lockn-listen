@@ -33,4 +33,12 @@ app.MapTranscriptionEndpoints();
 // Map classification endpoints (LOC-42)
 app.MapClassifyEndpoints();
 
+// Map classification WebSocket endpoints (LOC-43)
+app.UseWebSockets(options =>
+{
+    // Ensure WebSocketOptions with KeepAliveInterval = TimeSpan.FromSeconds(30)
+    options.KeepAliveInterval = TimeSpan.FromSeconds(30);
+});
+app.MapClassificationWebSocketEndpoints();
+
 app.Run();
