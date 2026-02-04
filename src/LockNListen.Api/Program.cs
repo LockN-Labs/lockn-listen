@@ -18,6 +18,9 @@ builder.Services.Configure<ApiKeyOptions>(builder.Configuration.GetSection("ApiK
 builder.Services.AddScoped<IApiKeyRepository, InMemoryApiKeyRepository>();
 builder.Services.AddScoped<IApiKeyService, ApiKeyService>();
 
+// Add HTTP client for lockn-apikeys service
+builder.Services.AddHttpClient<ApiKeyHttpClient>();
+
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
@@ -30,8 +33,8 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-// Add API Key middleware (before other routes)
-app.UseMiddleware<ApiKeyMiddleware>();
+// Add API Key validation middleware (before other routes)
+app.UseMiddleware<ApiKeyValidationMiddleware>();
 
 // Health check
 app.MapGet("/health", () => Results.Ok(new { status = "healthy", service = "lockn-listen" }))
