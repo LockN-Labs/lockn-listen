@@ -21,6 +21,15 @@ builder.Services.AddScoped<IApiKeyService, ApiKeyService>();
 // Add HTTP client for lockn-apikeys service
 builder.Services.AddHttpClient<ApiKeyHttpClient>();
 
+// Add HTTP client for LockNLogger
+builder.Services.AddHttpClient("LockNLogger", client =>
+{
+    // Base URL will be configured via appsettings.json
+});
+
+// Add receipt logger
+builder.Services.AddSingleton<IReceiptLogger, LockNLoggerClient>();
+
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
