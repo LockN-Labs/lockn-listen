@@ -1,5 +1,7 @@
 # LockN Listen
 
+[![CI](https://github.com/LockN-AI/lockn-listen/actions/workflows/ci.yml/badge.svg)](https://github.com/LockN-AI/lockn-listen/actions/workflows/ci.yml)
+
 **Audio perception layer for the LockN ecosystem.**
 
 LockN Listen provides auditory awareness capabilities — speech-to-text, sound event detection, and speaker identification — that can be consumed by any LockN service.
