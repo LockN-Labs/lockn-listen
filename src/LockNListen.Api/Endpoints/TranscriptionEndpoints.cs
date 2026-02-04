@@ -11,6 +11,7 @@ public static class TranscriptionEndpoints
         app.MapPost("/api/transcribe", async (
             HttpRequest request,
             ISttService sttService,
+            IReceiptLogger receiptLogger,
             CancellationToken ct) =>
         {
             // File size validation
@@ -28,7 +29,12 @@ public static class TranscriptionEndpoints
                     return Results.BadRequest(new { error = "Unsupported audio format. Supported: WAV, FLAC, MP3, MP4" });
 
                 var language = request.Query["language"].FirstOrDefault();
+                var startTime = DateTime.UtcNow;
                 var result = await sttService.TranscribeAsync(audioData, language, ct);
+                var latency = DateTime.UtcNow - startTime;
+
+                // Log receipt
+                _ = receiptLogger.LogTranscriptionReceiptAsync(result.Duration, _options.ModelSize, latency, result.DetectedLanguage);
 
                 return Results.Ok(new
                 {
@@ -62,6 +68,7 @@ public static class TranscriptionEndpoints
         app.MapPost("/api/transcribe/file", async (
             IFormFile file,
             ISttService sttService,
+            IReceiptLogger receiptLogger,
             string? language,
             CancellationToken ct) =>
         {
@@ -79,7 +86,12 @@ public static class TranscriptionEndpoints
                 if (!IsValidAudioFormat(audioData))
                     return Results.BadRequest(new { error = "Unsupported audio format. Supported: WAV, FLAC, MP3, MP4" });
 
+                var startTime = DateTime.UtcNow;
                 var result = await sttService.TranscribeAsync(audioData, language, ct);
+                var latency = DateTime.UtcNow - startTime;
+
+                // Log receipt
+                _ = receiptLogger.LogTranscriptionReceiptAsync(result.Duration, _options.ModelSize, latency, result.DetectedLanguage);
 
                 return Results.Ok(new
                 {
