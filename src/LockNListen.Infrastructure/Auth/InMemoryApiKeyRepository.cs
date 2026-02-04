@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using LockNListen.Domain.Models;
 using LockNListen.Domain.Services;
 
