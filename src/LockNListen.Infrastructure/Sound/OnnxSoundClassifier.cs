@@ -16,7 +16,7 @@ namespace LockNListen.Infrastructure.Sound
 {
     public class OnnxSoundClassifier : ISoundClassifier
     {
-        private static string _modelPath;
+        private static string _modelPath = string.Empty;
         private static readonly Lazy<InferenceSession> _session = new(() => CreateSession());
 
         // YAMNet class indices mapped to target categories
@@ -67,12 +67,15 @@ namespace LockNListen.Infrastructure.Sound
             var processedData = _preprocessor.Resample(audioData, sampleRate, 16000);
             processedData = _preprocessor.ApplyWindow(processedData);
 
-            // Create input tensor
-            var inputTensor = new DenseTensor<float>(processedData.Select(b => (float)b).ToArray(), new[] { 1, processedData.Length });
-            var inputs = new[] { Tuple.Create("input", inputTensor) };
+            // Convert byte[] to float[] for ONNX input
+            var floatData = processedData.Select(b => (float)b / 255.0f).ToArray();
 
-            // Run inference
-            using var results = _session.Run(inputs);
+            // Create input tensor
+            var inputTensor = new DenseTensor<float>(floatData, new[] { 1, floatData.Length });
+            var inputs = new List<NamedOnnxValue> { NamedOnnxValue.CreateFromTensor("input", inputTensor) };
+
+            // Run inference using Lazy<T>.Value
+            using var results = _session.Value.Run(inputs);
             var output = results.First().Value as DenseTensor<float>;
 
             // Map results

@@ -46,8 +46,9 @@ public class WhisperSttService : ISttService, IAsyncDisposable
             var fullText = new System.Text.StringBuilder();
             var startTime = DateTime.UtcNow;
 
-            // Process audio through Whisper
-            await foreach (var segment in _processor!.ProcessAsync(audioData, cancellationToken))
+            // Process audio through Whisper (convert byte[] to Stream)
+            using var audioStream = new MemoryStream(audioData);
+            await foreach (var segment in _processor!.ProcessAsync(audioStream, cancellationToken))
             {
                 segments.Add(new TranscriptionSegment
                 {
@@ -110,16 +111,12 @@ public class WhisperSttService : ISttService, IAsyncDisposable
 
             var modelPath = await EnsureModelDownloadedAsync(_options.ModelSize, cancellationToken);
             
-            var builder = WhisperFactory.FromPath(modelPath)
+            // GPU acceleration is automatic with Whisper.net.Runtime.Cuda package
+            // No explicit WithGpu() needed in Whisper.net 1.7+
+            _processor = WhisperFactory.FromPath(modelPath)
                 .CreateBuilder()
-                .WithLanguage(_options.Language ?? "en");
-
-            if (_options.UseGpu)
-            {
-                builder.WithGpu();
-            }
-
-            _processor = builder.Build();
+                .WithLanguage(_options.Language ?? "en")
+                .Build();
             
             _logger.LogInformation("Whisper processor initialized successfully");
         }
@@ -156,7 +153,8 @@ public class WhisperSttService : ISttService, IAsyncDisposable
         {
             _logger.LogInformation("Downloading Whisper model {Model} to {Path}", modelSize, modelPath);
             
-            using var modelStream = await WhisperGgmlDownloader.GetGgmlModelAsync(ggmlType, cancellationToken);
+            // WhisperGgmlDownloader.GetGgmlModelAsync signature: (GgmlType type)
+            using var modelStream = await WhisperGgmlDownloader.GetGgmlModelAsync(ggmlType);
             using var fileStream = File.Create(modelPath);
             await modelStream.CopyToAsync(fileStream, cancellationToken);
             
