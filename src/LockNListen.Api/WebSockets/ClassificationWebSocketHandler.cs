@@ -6,6 +6,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using LockNListen.Api.WebSockets;
+using LockNListen.Domain.Models;
 using LockNListen.Domain.Services;
 
 namespace LockNListen.Api.WebSockets

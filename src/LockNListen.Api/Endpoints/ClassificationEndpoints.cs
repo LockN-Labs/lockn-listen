@@ -1,3 +1,4 @@
+using LockNListen.Domain.Models;
 using LockNListen.Domain.Services;
 using Microsoft.AspNetCore.Mvc;
 
