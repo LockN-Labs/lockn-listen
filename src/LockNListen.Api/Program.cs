@@ -1,3 +1,6 @@
+using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
+
 using LockNListen.Api.Endpoints;
 using LockNListen.Api.Middleware;
 using LockNListen.Domain.Models;
@@ -10,6 +13,21 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container
 builder.Services.Configure<SoundClassifierOptions>(builder.Configuration.GetSection("SoundClassifier"));
+
+builder.Services.AddOpenTelemetry()
+    .WithTracing(tracerProviderBuilder =>
+    {
+        tracerProviderBuilder
+            .SetResourceBuilder(ResourceBuilder.CreateDefault().AddService("lockn-listen"))
+            .AddAspNetCoreInstrumentation()
+            .AddHttpClientInstrumentation()
+            .AddOtlpExporter(options =>
+            {
+                var endpoint = builder.Configuration["OTEL_EXPORTER_OTLP_ENDPOINT"] ?? "http://localhost:4317";
+                options.Endpoint = new Uri(endpoint);
+            });
+    });
+
 builder.Services.AddSingleton<ISttService, WhisperSttService>();
 builder.Services.AddSingleton<ISoundClassifier, OnnxSoundClassifier>();
 
