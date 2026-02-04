@@ -38,7 +38,7 @@ public class WhisperSttService : ISttService, IAsyncDisposable
         _logger.LogInformation("Transcribing {Bytes} bytes of audio with Whisper", audioData.Length);
 
         await EnsureProcessorInitializedAsync(cancellationToken);
-        
+
         await _processorLock.WaitAsync(cancellationToken);
         try
         {
@@ -46,8 +46,9 @@ public class WhisperSttService : ISttService, IAsyncDisposable
             var fullText = new System.Text.StringBuilder();
             var startTime = DateTime.UtcNow;
 
-            // Process audio through Whisper
-            await foreach (var segment in _processor!.ProcessAsync(audioData, cancellationToken))
+            // Process audio through Whisper (convert byte[] to Stream)
+            using var audioStream = new MemoryStream(audioData);
+            await foreach (var segment in _processor!.ProcessAsync(audioStream, cancellationToken))
             {
                 segments.Add(new TranscriptionSegment
                 {
@@ -68,11 +69,11 @@ public class WhisperSttService : ISttService, IAsyncDisposable
             return new TranscriptionResult
             {
                 Text = fullText.ToString().Trim(),
-                Confidence = segments.Count > 0 
-                    ? segments.Average(s => s.Confidence) 
+                Confidence = segments.Count > 0
+                    ? segments.Average(s => s.Confidence)
                     : 0.0,
-                Duration = segments.Count > 0 
-                    ? segments.Max(s => s.End) 
+                Duration = segments.Count > 0
+                    ? segments.Max(s => s.End)
                     : TimeSpan.Zero,
                 DetectedLanguage = language ?? _options.Language ?? "en",
                 Segments = segments
@@ -109,18 +110,14 @@ public class WhisperSttService : ISttService, IAsyncDisposable
                 _options.UseGpu);
 
             var modelPath = await EnsureModelDownloadedAsync(_options.ModelSize, cancellationToken);
-            
-            var builder = WhisperFactory.FromPath(modelPath)
+
+            // GPU acceleration is automatic with Whisper.net.Runtime.Cuda package
+            // No explicit WithGpu() needed in Whisper.net 1.7+
+            _processor = WhisperFactory.FromPath(modelPath)
                 .CreateBuilder()
-                .WithLanguage(_options.Language ?? "en");
+                .WithLanguage(_options.Language ?? "en")
+                .Build();
 
-            if (_options.UseGpu)
-            {
-                builder.WithGpu();
-            }
-
-            _processor = builder.Build();
-            
             _logger.LogInformation("Whisper processor initialized successfully");
         }
         finally
@@ -136,7 +133,7 @@ public class WhisperSttService : ISttService, IAsyncDisposable
             "LockNListen",
             "models",
             "whisper");
-        
+
         Directory.CreateDirectory(modelDir);
 
         var ggmlType = modelSize.ToLowerInvariant() switch
@@ -155,11 +152,12 @@ public class WhisperSttService : ISttService, IAsyncDisposable
         if (!File.Exists(modelPath))
         {
             _logger.LogInformation("Downloading Whisper model {Model} to {Path}", modelSize, modelPath);
-            
-            using var modelStream = await WhisperGgmlDownloader.GetGgmlModelAsync(ggmlType, cancellationToken);
+
+            // WhisperGgmlDownloader.GetGgmlModelAsync signature: (GgmlType type)
+            using var modelStream = await WhisperGgmlDownloader.GetGgmlModelAsync(ggmlType);
             using var fileStream = File.Create(modelPath);
             await modelStream.CopyToAsync(fileStream, cancellationToken);
-            
+
             _logger.LogInformation("Model download complete: {Path}", modelPath);
         }
 
@@ -173,7 +171,7 @@ public class WhisperSttService : ISttService, IAsyncDisposable
 
         _processor?.Dispose();
         _processorLock.Dispose();
-        
+
         await Task.CompletedTask;
         GC.SuppressFinalize(this);
     }

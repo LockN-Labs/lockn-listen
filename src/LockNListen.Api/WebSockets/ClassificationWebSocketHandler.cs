@@ -6,6 +6,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using LockNListen.Api.WebSockets;
+using LockNListen.Domain.Models;
 using LockNListen.Domain.Services;
 
 namespace LockNListen.Api.WebSockets
@@ -31,11 +32,8 @@ namespace LockNListen.Api.WebSockets
         {
             try
             {
-                // Set up keep-alive
-                webSocket.Options.KeepAliveInterval = TimeSpan.FromSeconds(30);
-
-                // Accept the WebSocket connection
-                await webSocket.AcceptAsync();
+                // Note: Keep-alive is configured at the middleware level via UseWebSockets options
+                // Note: WebSocket is already accepted via WebSocketManager.AcceptWebSocketAsync()
 
                 var buffer = new byte[1024];
                 var arraySegment = new ArraySegment<byte>(buffer);
@@ -47,25 +45,25 @@ namespace LockNListen.Api.WebSockets
 
                     if (result.MessageType == WebSocketMessageType.Close)
                     {
-                        await webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, 
+                        await webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure,
                             "Connection closed by client", CancellationToken.None);
                         break;
                     }
 
                     if (result.MessageType == WebSocketMessageType.Binary)
                     {
-                        // Process audio chunk
-                        await ProcessAudioChunk(webSocket, result.Array, result.Count, classifier);
+                        // Process audio chunk using the buffer data (not result.Array which doesn't exist)
+                        await ProcessAudioChunk(webSocket, buffer, result.Count, classifier);
                     }
                 }
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 // Log exception if logging is available
                 // For now, we'll just close the connection gracefully
                 if (webSocket.State == WebSocketState.Open)
                 {
-                    await webSocket.CloseAsync(WebSocketCloseStatus.InternalServerError, 
+                    await webSocket.CloseAsync(WebSocketCloseStatus.InternalServerError,
                         "Internal server error", CancellationToken.None);
                 }
             }
@@ -81,7 +79,7 @@ namespace LockNListen.Api.WebSockets
             if (count % 2 != 0)
             {
                 // Invalid PCM format - not 16-bit
-                await webSocket.CloseAsync(WebSocketCloseStatus.ProtocolError, 
+                await webSocket.CloseAsync(WebSocketCloseStatus.ProtocolError,
                     "Invalid PCM format", CancellationToken.None);
                 return;
             }
@@ -90,7 +88,7 @@ namespace LockNListen.Api.WebSockets
             if (count != 1920)
             {
                 // Reject invalid sizes
-                await webSocket.CloseAsync(WebSocketCloseStatus.MessageTooBig, 
+                await webSocket.CloseAsync(WebSocketCloseStatus.MessageTooBig,
                     "Invalid audio chunk size", CancellationToken.None);
                 return;
             }
@@ -98,9 +96,9 @@ namespace LockNListen.Api.WebSockets
             // Copy only the relevant portion of the chunk
             var actualChunk = new byte[count];
             Array.Copy(chunk, actualChunk, count);
-            
+
             _buffer.Append(actualChunk);
-            
+
             if (_buffer.IsFull)
             {
                 using var stream = _buffer.GetStream();
@@ -130,7 +128,7 @@ namespace LockNListen.Api.WebSockets
 
             var json = JsonSerializer.Serialize(message, _jsonOptions);
             var bytes = Encoding.UTF8.GetBytes(json);
-            
+
             // Send back to client
             var arraySegment = new ArraySegment<byte>(bytes);
             // Check WebSocket state before sending to handle backpressure

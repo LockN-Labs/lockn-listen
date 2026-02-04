@@ -12,12 +12,12 @@ namespace LockNListen.Api.Endpoints
         public static void MapAuthEndpoints(this IEndpointRouteBuilder routes)
         {
             var group = routes.MapGroup("/api/auth");
-            
+
             group.MapPost("/generate-key", GenerateApiKey)
                 .WithTags("Authentication")
                 .WithOpenApi();
         }
-        
+
         private static async Task<IResult> GenerateApiKey(
             string description,
             HashSet<string> scopes,

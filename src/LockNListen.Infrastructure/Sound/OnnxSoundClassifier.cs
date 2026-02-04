@@ -16,7 +16,7 @@ namespace LockNListen.Infrastructure.Sound
 {
     public class OnnxSoundClassifier : ISoundClassifier
     {
-        private static string _modelPath;
+        private static string _modelPath = string.Empty;
         private static readonly Lazy<InferenceSession> _session = new(() => CreateSession());
 
         // YAMNet class indices mapped to target categories
@@ -30,11 +30,15 @@ namespace LockNListen.Infrastructure.Sound
             { 401, "Alarm" },  // Fire alarm, smoke detector
         };
 
-        private static InferenceSession CreateSession() {
+        private static InferenceSession CreateSession()
+        {
             var options = new SessionOptions();
-            try {
+            try
+            {
                 options.AppendExecutionProvider_CUDA();
-            } catch (Exception ex) {
+            }
+            catch (Exception ex)
+            {
                 // CPU fallback - CUDA not available or failed to initialize
                 // In production, consider logging: ex.Message
                 System.Diagnostics.Debug.WriteLine($"CUDA unavailable, using CPU: {ex.Message}");
@@ -42,8 +46,10 @@ namespace LockNListen.Infrastructure.Sound
             return new InferenceSession(_modelPath, options);
         }
 
-        private static async Task EnsureModelExists(string modelPath) {
-            if (!File.Exists(modelPath)) {
+        private static async Task EnsureModelExists(string modelPath)
+        {
+            if (!File.Exists(modelPath))
+            {
                 Directory.CreateDirectory(Path.GetDirectoryName(modelPath)!);
                 using var http = new HttpClient { Timeout = TimeSpan.FromMinutes(5) };
                 var bytes = await http.GetByteArrayAsync("https://github.com/onnx/models/raw/main/validated/vision/classification/yamnet/model/yamnet.onnx");
@@ -63,16 +69,17 @@ namespace LockNListen.Infrastructure.Sound
 
         public async Task<SoundClassification> ClassifyAsync(byte[] audioData, int sampleRate)
         {
-            // Preprocess audio data
-            var processedData = _preprocessor.Resample(audioData, sampleRate, 16000);
-            processedData = _preprocessor.ApplyWindow(processedData);
+            // Preprocess audio data: resample, then convert to float, then apply window
+            var resampledData = _preprocessor.Resample(audioData, sampleRate, 16000);
+            var floatData = resampledData.Select(b => (float)b / 255.0f).ToArray();
+            var windowedData = _preprocessor.ApplyWindow(floatData);
 
             // Create input tensor
-            var inputTensor = new DenseTensor<float>(processedData.Select(b => (float)b).ToArray(), new[] { 1, processedData.Length });
-            var inputs = new[] { Tuple.Create("input", inputTensor) };
+            var inputTensor = new DenseTensor<float>(windowedData, new[] { 1, windowedData.Length });
+            var inputs = new List<NamedOnnxValue> { NamedOnnxValue.CreateFromTensor("input", inputTensor) };
 
-            // Run inference
-            using var results = _session.Run(inputs);
+            // Run inference using Lazy<T>.Value
+            using var results = _session.Value.Run(inputs);
             var output = results.First().Value as DenseTensor<float>;
 
             // Map results
@@ -91,11 +98,14 @@ namespace LockNListen.Infrastructure.Sound
             return await ClassifyAsync(ms.ToArray(), 16000);
         }
 
-        private string GetPredictedCategory(DenseTensor<float> output) {
+        private string GetPredictedCategory(DenseTensor<float> output)
+        {
             var maxIndex = 0;
             var maxValue = float.MinValue;
-            for (int i = 0; i < output.Length; i++) {
-                if (output[i] > maxValue) {
+            for (int i = 0; i < output.Length; i++)
+            {
+                if (output[i] > maxValue)
+                {
                     maxValue = output[i];
                     maxIndex = i;
                 }
@@ -103,7 +113,8 @@ namespace LockNListen.Infrastructure.Sound
             return CategoryMap.TryGetValue(maxIndex, out var category) ? category : "Unknown";
         }
 
-        private float GetConfidenceScore(DenseTensor<float> output) {
+        private float GetConfidenceScore(DenseTensor<float> output)
+        {
             return output.Max();
         }
     }

@@ -3,6 +3,7 @@ using OpenTelemetry.Trace;
 
 using LockNListen.Api.Endpoints;
 using LockNListen.Api.Middleware;
+using LockNListen.Domain.Interfaces;
 using LockNListen.Domain.Models;
 using LockNListen.Domain.Services;
 using LockNListen.Infrastructure.Auth;
@@ -13,6 +14,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container
 builder.Services.Configure<SoundClassifierOptions>(builder.Configuration.GetSection("SoundClassifier"));
+builder.Services.Configure<WhisperOptions>(builder.Configuration.GetSection("Whisper"));
 
 builder.Services.AddOpenTelemetry()
     .WithTracing(tracerProviderBuilder =>
@@ -78,10 +80,9 @@ app.MapTranscriptionEndpoints();
 app.MapClassifyEndpoints();
 
 // Map classification WebSocket endpoints (LOC-43)
-app.UseWebSockets(options =>
+app.UseWebSockets(new WebSocketOptions
 {
-    // Ensure WebSocketOptions with KeepAliveInterval = TimeSpan.FromSeconds(30)
-    options.KeepAliveInterval = TimeSpan.FromSeconds(30);
+    KeepAliveInterval = TimeSpan.FromSeconds(30)
 });
 app.MapClassificationWebSocketEndpoints();
 
