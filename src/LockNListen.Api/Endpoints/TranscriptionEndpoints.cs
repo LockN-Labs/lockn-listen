@@ -1,5 +1,6 @@
 using LockNListen.Domain.Interfaces;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Options;
 
 namespace LockNListen.Api.Endpoints;
 
@@ -12,6 +13,7 @@ public static class TranscriptionEndpoints
             HttpRequest request,
             ISttService sttService,
             IReceiptLogger receiptLogger,
+            IOptions<WhisperOptions> options,
             CancellationToken ct) =>
         {
             // File size validation
@@ -34,7 +36,7 @@ public static class TranscriptionEndpoints
                 var latency = DateTime.UtcNow - startTime;
 
                 // Log receipt
-                _ = receiptLogger.LogTranscriptionReceiptAsync(result.Duration, _options.ModelSize, latency, result.DetectedLanguage);
+                _ = receiptLogger.LogTranscriptionReceiptAsync(result.Duration, options.Value.ModelSize, latency, result.DetectedLanguage);
 
                 return Results.Ok(new
                 {
@@ -69,6 +71,7 @@ public static class TranscriptionEndpoints
             IFormFile file,
             ISttService sttService,
             IReceiptLogger receiptLogger,
+            IOptions<WhisperOptions> options,
             string? language,
             CancellationToken ct) =>
         {
@@ -91,7 +94,7 @@ public static class TranscriptionEndpoints
                 var latency = DateTime.UtcNow - startTime;
 
                 // Log receipt
-                _ = receiptLogger.LogTranscriptionReceiptAsync(result.Duration, _options.ModelSize, latency, result.DetectedLanguage);
+                _ = receiptLogger.LogTranscriptionReceiptAsync(result.Duration, options.Value.ModelSize, latency, result.DetectedLanguage);
 
                 return Results.Ok(new
                 {

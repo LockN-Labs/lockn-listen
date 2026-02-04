@@ -35,7 +35,8 @@ namespace LockNListen.Infrastructure.Services
                 var json = JsonSerializer.Serialize(receipt);
                 var content = new StringContent(json, Encoding.UTF8, "application/json");
 
-                await _httpClient.PostAsync("/api/receipts", content);
+                // Fire-and-forget pattern - don't await the result
+                _ = _httpClient.PostAsync("/api/receipts", content);
             }
             catch (Exception ex)
             {
