@@ -1,5 +1,5 @@
 # Stage 1: Restore
-FROM mcr.microsoft.com/dotnet/sdk:8.0 AS restore
+FROM mcr.microsoft.com/dotnet/sdk:9.0 AS restore
 WORKDIR /src
 COPY src/LockNListen.Api/*.csproj ./src/LockNListen.Api/
 COPY src/LockNListen.Domain/*.csproj ./src/LockNListen.Domain/
@@ -17,7 +17,7 @@ FROM build AS publish
 RUN dotnet publish src/LockNListen.Api/LockNListen.Api.csproj -c Release -o /app --no-build
 
 # Stage 4: Runtime
-FROM mcr.microsoft.com/dotnet/aspnet:8.0
+FROM mcr.microsoft.com/dotnet/aspnet:9.0
 WORKDIR /app
 EXPOSE 8080
 COPY --from=publish /app .
