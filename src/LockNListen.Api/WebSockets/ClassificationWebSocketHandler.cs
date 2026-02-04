@@ -32,11 +32,8 @@ namespace LockNListen.Api.WebSockets
         {
             try
             {
-                // Set up keep-alive
-                webSocket.Options.KeepAliveInterval = TimeSpan.FromSeconds(30);
-
-                // Accept the WebSocket connection
-                await webSocket.AcceptAsync();
+                // Note: Keep-alive is configured at the middleware level via UseWebSockets options
+                // Note: WebSocket is already accepted via WebSocketManager.AcceptWebSocketAsync()
 
                 var buffer = new byte[1024];
                 var arraySegment = new ArraySegment<byte>(buffer);
@@ -55,12 +52,12 @@ namespace LockNListen.Api.WebSockets
 
                     if (result.MessageType == WebSocketMessageType.Binary)
                     {
-                        // Process audio chunk
-                        await ProcessAudioChunk(webSocket, result.Array, result.Count, classifier);
+                        // Process audio chunk using the buffer data (not result.Array which doesn't exist)
+                        await ProcessAudioChunk(webSocket, buffer, result.Count, classifier);
                     }
                 }
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 // Log exception if logging is available
                 // For now, we'll just close the connection gracefully
