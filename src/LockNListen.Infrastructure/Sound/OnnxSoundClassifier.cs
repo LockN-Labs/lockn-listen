@@ -63,15 +63,13 @@ namespace LockNListen.Infrastructure.Sound
 
         public async Task<SoundClassification> ClassifyAsync(byte[] audioData, int sampleRate)
         {
-            // Preprocess audio data
-            var processedData = _preprocessor.Resample(audioData, sampleRate, 16000);
-            processedData = _preprocessor.ApplyWindow(processedData);
-
-            // Convert byte[] to float[] for ONNX input
-            var floatData = processedData.Select(b => (float)b / 255.0f).ToArray();
+            // Preprocess audio data: resample, then convert to float, then apply window
+            var resampledData = _preprocessor.Resample(audioData, sampleRate, 16000);
+            var floatData = resampledData.Select(b => (float)b / 255.0f).ToArray();
+            var windowedData = _preprocessor.ApplyWindow(floatData);
 
             // Create input tensor
-            var inputTensor = new DenseTensor<float>(floatData, new[] { 1, floatData.Length });
+            var inputTensor = new DenseTensor<float>(windowedData, new[] { 1, windowedData.Length });
             var inputs = new List<NamedOnnxValue> { NamedOnnxValue.CreateFromTensor("input", inputTensor) };
 
             // Run inference using Lazy<T>.Value
