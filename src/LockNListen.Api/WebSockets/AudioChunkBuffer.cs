@@ -26,7 +26,7 @@ namespace LockNListen.Api.WebSockets
                 Reset(); // Reset buffer on partial frame
                 return;
             }
-            
+
             _chunks.Add(chunk);
             _totalBytes += chunk.Length;
         }

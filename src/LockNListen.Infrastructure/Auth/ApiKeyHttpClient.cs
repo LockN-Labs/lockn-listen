@@ -24,11 +24,11 @@ namespace LockNListen.Infrastructure.Auth
                 var json = JsonSerializer.Serialize(request);
                 var content = new StringContent(json, Encoding.UTF8, "application/json");
 
-                var baseUrl = Environment.GetEnvironmentVariable("LockNApiKeys__BaseUrl") 
+                var baseUrl = Environment.GetEnvironmentVariable("LockNApiKeys__BaseUrl")
                     ?? "http://localhost:5000"; // Default fallback
-                
+
                 var response = await _httpClient.PostAsync($"{baseUrl}/api/keys/validate", content);
-                
+
                 if (response.IsSuccessStatusCode)
                 {
                     var responseContent = await response.Content.ReadAsStringAsync();

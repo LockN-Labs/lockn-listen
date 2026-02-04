@@ -45,7 +45,7 @@ namespace LockNListen.Api.WebSockets
 
                     if (result.MessageType == WebSocketMessageType.Close)
                     {
-                        await webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, 
+                        await webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure,
                             "Connection closed by client", CancellationToken.None);
                         break;
                     }
@@ -63,7 +63,7 @@ namespace LockNListen.Api.WebSockets
                 // For now, we'll just close the connection gracefully
                 if (webSocket.State == WebSocketState.Open)
                 {
-                    await webSocket.CloseAsync(WebSocketCloseStatus.InternalServerError, 
+                    await webSocket.CloseAsync(WebSocketCloseStatus.InternalServerError,
                         "Internal server error", CancellationToken.None);
                 }
             }
@@ -79,7 +79,7 @@ namespace LockNListen.Api.WebSockets
             if (count % 2 != 0)
             {
                 // Invalid PCM format - not 16-bit
-                await webSocket.CloseAsync(WebSocketCloseStatus.ProtocolError, 
+                await webSocket.CloseAsync(WebSocketCloseStatus.ProtocolError,
                     "Invalid PCM format", CancellationToken.None);
                 return;
             }
@@ -88,7 +88,7 @@ namespace LockNListen.Api.WebSockets
             if (count != 1920)
             {
                 // Reject invalid sizes
-                await webSocket.CloseAsync(WebSocketCloseStatus.MessageTooBig, 
+                await webSocket.CloseAsync(WebSocketCloseStatus.MessageTooBig,
                     "Invalid audio chunk size", CancellationToken.None);
                 return;
             }
@@ -96,9 +96,9 @@ namespace LockNListen.Api.WebSockets
             // Copy only the relevant portion of the chunk
             var actualChunk = new byte[count];
             Array.Copy(chunk, actualChunk, count);
-            
+
             _buffer.Append(actualChunk);
-            
+
             if (_buffer.IsFull)
             {
                 using var stream = _buffer.GetStream();
@@ -128,7 +128,7 @@ namespace LockNListen.Api.WebSockets
 
             var json = JsonSerializer.Serialize(message, _jsonOptions);
             var bytes = Encoding.UTF8.GetBytes(json);
-            
+
             // Send back to client
             var arraySegment = new ArraySegment<byte>(bytes);
             // Check WebSocket state before sending to handle backpressure

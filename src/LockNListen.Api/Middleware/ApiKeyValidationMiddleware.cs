@@ -22,17 +22,17 @@ namespace LockNListen.Api.Middleware
         public async Task InvokeAsync(HttpContext context)
         {
             var path = context.Request.Path.Value ?? "";
-            
+
             // Allow health endpoints to remain unauthenticated
             if (IsHealthEndpoint(path))
             {
                 await _next(context);
                 return;
             }
-            
+
             // Check for API key in Authorization header or X-Api-Key header
             string? apiKey = GetApiKeyFromHeaders(context.Request.Headers);
-            
+
             if (string.IsNullOrEmpty(apiKey))
             {
                 await Reject(context, "API key required");
@@ -56,7 +56,7 @@ namespace LockNListen.Api.Middleware
 
             // Add validated key info to request context
             context.Items["ApiKey"] = validationResponse;
-            
+
             await _next(context);
         }
 
@@ -70,20 +70,20 @@ namespace LockNListen.Api.Middleware
         private string? GetApiKeyFromHeaders(IHeaderDictionary headers)
         {
             // Check Authorization header (Bearer token)
-            if (headers.TryGetValue("Authorization", out var authHeader) && 
-                !string.IsNullOrEmpty(authHeader) && 
+            if (headers.TryGetValue("Authorization", out var authHeader) &&
+                !string.IsNullOrEmpty(authHeader) &&
                 authHeader.ToString().StartsWith("Bearer "))
             {
                 return authHeader.ToString().Substring("Bearer ".Length).Trim();
             }
-            
+
             // Check X-Api-Key header
-            if (headers.TryGetValue("X-Api-Key", out var apiKeyHeader) && 
+            if (headers.TryGetValue("X-Api-Key", out var apiKeyHeader) &&
                 !string.IsNullOrEmpty(apiKeyHeader))
             {
                 return apiKeyHeader.ToString().Trim();
             }
-            
+
             return null;
         }
 
@@ -95,11 +95,11 @@ namespace LockNListen.Api.Middleware
                 var json = JsonSerializer.Serialize(request);
                 var content = new StringContent(json, Encoding.UTF8, "application/json");
 
-                var baseUrl = Environment.GetEnvironmentVariable("LockNApiKeys__BaseUrl") 
+                var baseUrl = Environment.GetEnvironmentVariable("LockNApiKeys__BaseUrl")
                     ?? "http://localhost:5000"; // Default fallback
-                
+
                 var response = await _httpClient.PostAsync($"{baseUrl}/api/keys/validate", content);
-                
+
                 if (response.IsSuccessStatusCode)
                 {
                     var responseContent = await response.Content.ReadAsStringAsync();
@@ -126,7 +126,7 @@ namespace LockNListen.Api.Middleware
             //
             // For now, we'll allow all requests (returning true) as the core validation
             // functionality is the main requirement. The rate limiting can be enhanced later.
-            
+
             // In a production implementation, this would:
             // 1. Track requests per key and time window
             // 2. Compare against RateLimitPerMinute from the validation response

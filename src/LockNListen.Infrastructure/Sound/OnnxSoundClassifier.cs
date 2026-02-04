@@ -30,11 +30,15 @@ namespace LockNListen.Infrastructure.Sound
             { 401, "Alarm" },  // Fire alarm, smoke detector
         };
 
-        private static InferenceSession CreateSession() {
+        private static InferenceSession CreateSession()
+        {
             var options = new SessionOptions();
-            try {
+            try
+            {
                 options.AppendExecutionProvider_CUDA();
-            } catch (Exception ex) {
+            }
+            catch (Exception ex)
+            {
                 // CPU fallback - CUDA not available or failed to initialize
                 // In production, consider logging: ex.Message
                 System.Diagnostics.Debug.WriteLine($"CUDA unavailable, using CPU: {ex.Message}");
@@ -42,8 +46,10 @@ namespace LockNListen.Infrastructure.Sound
             return new InferenceSession(_modelPath, options);
         }
 
-        private static async Task EnsureModelExists(string modelPath) {
-            if (!File.Exists(modelPath)) {
+        private static async Task EnsureModelExists(string modelPath)
+        {
+            if (!File.Exists(modelPath))
+            {
                 Directory.CreateDirectory(Path.GetDirectoryName(modelPath)!);
                 using var http = new HttpClient { Timeout = TimeSpan.FromMinutes(5) };
                 var bytes = await http.GetByteArrayAsync("https://github.com/onnx/models/raw/main/validated/vision/classification/yamnet/model/yamnet.onnx");
@@ -92,11 +98,14 @@ namespace LockNListen.Infrastructure.Sound
             return await ClassifyAsync(ms.ToArray(), 16000);
         }
 
-        private string GetPredictedCategory(DenseTensor<float> output) {
+        private string GetPredictedCategory(DenseTensor<float> output)
+        {
             var maxIndex = 0;
             var maxValue = float.MinValue;
-            for (int i = 0; i < output.Length; i++) {
-                if (output[i] > maxValue) {
+            for (int i = 0; i < output.Length; i++)
+            {
+                if (output[i] > maxValue)
+                {
                     maxValue = output[i];
                     maxIndex = i;
                 }
@@ -104,7 +113,8 @@ namespace LockNListen.Infrastructure.Sound
             return CategoryMap.TryGetValue(maxIndex, out var category) ? category : "Unknown";
         }
 
-        private float GetConfidenceScore(DenseTensor<float> output) {
+        private float GetConfidenceScore(DenseTensor<float> output)
+        {
             return output.Max();
         }
     }
