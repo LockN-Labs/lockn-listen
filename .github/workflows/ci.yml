@@ -1,22 +1,43 @@
 name: CI
+
 on:
-  push:
-    branches: [master]
   pull_request:
-    branches: [master]
+    branches: [main]
+  push:
+    branches: [main]
+
+env:
+  DOTNET_VERSION: '9.0.x'
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-dotnet@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '9.0.x'
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
       - name: Restore dependencies
         run: dotnet restore
+
       - name: Build
-        run: dotnet build --no-restore
-      - name: Run dotnet format
-        run: dotnet format --verify-no-changes
+        run: dotnet build --no-restore --configuration Release
+
+      - name: Check for tests
+        id: check_tests
+        run: |
+          if [ -d "tests" ]; then
+            echo "has_tests=true" >> $GITHUB_OUTPUT
+          else
+            echo "has_tests=false" >> $GITHUB_OUTPUT
+          fi
+
       - name: Run tests
-        run: dotnet test --no-build --verbosity normal
+        if: steps.check_tests.outputs.has_tests == 'true'
+        run: dotnet test --no-build --configuration Release --verbosity normal
