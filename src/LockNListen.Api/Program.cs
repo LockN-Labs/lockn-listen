@@ -9,12 +9,14 @@ using LockNListen.Domain.Services;
 using LockNListen.Infrastructure.Auth;
 using LockNListen.Infrastructure.Services;
 using LockNListen.Infrastructure.Sound;
+using LockNListen.Infrastructure.Speech;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container
 builder.Services.Configure<SoundClassifierOptions>(builder.Configuration.GetSection("SoundClassifier"));
 builder.Services.Configure<WhisperOptions>(builder.Configuration.GetSection("Whisper"));
+builder.Services.Configure<FasterWhisperOptions>(builder.Configuration.GetSection("FasterWhisper"));
 
 builder.Services.AddOpenTelemetry()
     .WithTracing(tracerProviderBuilder =>
@@ -32,6 +34,9 @@ builder.Services.AddOpenTelemetry()
 
 builder.Services.AddSingleton<ISttService, WhisperSttService>();
 builder.Services.AddSingleton<ISoundClassifier, OnnxSoundClassifier>();
+
+// Streaming STT service (faster-whisper HTTP client)
+builder.Services.AddHttpClient<IStreamingSttService, FasterWhisperSttService>();
 
 // Add API Key services
 builder.Services.Configure<ApiKeyOptions>(builder.Configuration.GetSection("ApiKey"));
@@ -85,5 +90,8 @@ app.UseWebSockets(new WebSocketOptions
     KeepAliveInterval = TimeSpan.FromSeconds(30)
 });
 app.MapClassificationWebSocketEndpoints();
+
+// Map STT WebSocket endpoint (LOC-164)
+app.MapSttWebSocketEndpoints();
 
 app.Run();
