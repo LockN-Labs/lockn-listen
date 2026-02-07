@@ -1,5 +1,7 @@
+using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
+using LockNListen.Api.Errors;
 using LockNListen.Domain.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
@@ -136,9 +138,29 @@ namespace LockNListen.Api.Middleware
 
         private static async Task Reject(HttpContext context, string message, int statusCode = 401)
         {
+            var traceId = Activity.Current?.Id ?? context.TraceIdentifier;
+            var code = statusCode switch
+            {
+                401 => ErrorCodes.AuthInvalidKey,
+                429 => ErrorCodes.AuthRateLimitExceeded,
+                _ => ErrorCodes.AuthInvalidKey
+            };
+            
+            var errorResponse = new ErrorResponse
+            {
+                Code = code,
+                Message = message,
+                Status = statusCode,
+                TraceId = traceId,
+                Path = context.Request.Path
+            };
+            
             context.Response.StatusCode = statusCode;
             context.Response.ContentType = "application/json";
-            await context.Response.WriteAsync(JsonSerializer.Serialize(new { error = message }));
+            await context.Response.WriteAsync(JsonSerializer.Serialize(errorResponse, new JsonSerializerOptions
+            {
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+            }));
         }
     }
 }

@@ -2,6 +2,7 @@ using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 
 using LockNListen.Api.Endpoints;
+using LockNListen.Api.Errors;
 using LockNListen.Api.Middleware;
 using LockNListen.Domain.Interfaces;
 using LockNListen.Domain.Models;
@@ -59,6 +60,9 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
+
+// Global exception handling (must be first in pipeline)
+app.UseGlobalExceptionHandler();
 
 // Configure the HTTP request pipeline
 if (app.Environment.IsDevelopment())
